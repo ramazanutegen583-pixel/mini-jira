@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/minijira;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password: ''
+app:
+  jwt:
+    secret: development-only-key-change-before-deploying-1234567890
+  bootstrap:
+    email: admin@teamflow.local
+    password: Admin-demo-2026!

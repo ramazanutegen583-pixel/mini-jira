@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: mini-jira
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/minijira}
+    username: ${DB_USERNAME:minijira}
+    password: ${DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+server:
+  port: ${PORT:8082}
+  error:
+    include-message: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    issuer: teamflow
+    ttl: PT30M
+  bootstrap:
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}
+logging:
+  pattern:
+    level: '%5p [requestId=%X{requestId:-}]'
