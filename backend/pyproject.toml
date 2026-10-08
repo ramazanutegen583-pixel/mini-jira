@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=78"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "teamflow-api"
+version = "1.0.0"
+description = "Teamflow Mini-Jira REST API"
+requires-python = ">=3.12,<3.15"
+dependencies = [
+    "fastapi==0.142.4",
+    "uvicorn[standard]>=0.40,<1",
+    "sqlalchemy[asyncio]>=2.0.54,<2.1",
+    "asyncpg>=0.31,<1",
+    "psycopg[binary]>=3.2,<4",
+    "aiosqlite>=0.21,<1",
+    "alembic>=1.17,<2",
+    "pydantic-settings>=2.11,<3",
+    "email-validator>=2.3,<3",
+    "PyJWT>=2.10,<3",
+    "pwdlib[argon2]>=0.3,<1",
+    "python-multipart>=0.0.20,<1",
+]
+
+[project.optional-dependencies]
+test = ["httpx>=0.28,<1", "pytest>=8.4,<9", "pytest-asyncio>=1.2,<2", "pytest-cov>=7,<8", "ruff>=0.14,<1"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 70

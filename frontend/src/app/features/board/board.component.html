@@ -61,7 +61,7 @@
         </section>
       } @else {
         <section class="team-panel"><div class="team-heading"><h2>Участники команды <span>{{ users().length }}</span></h2><p class="muted">Общая доска. Общие цели.</p></div>
-          @for (user of users(); track user.id) { <div class="member-row"><span class="avatar">{{ initials(user.name) }}</span><div><strong>{{ user.name }}</strong><small>{{ user.email }}</small></div><span class="role-badge">{{ user.role === 'ADMIN' ? 'Администратор' : 'Участник' }}</span><span class="member-tasks">{{ tasksForUser(user.id) }} задач</span></div> }
+          @for (user of users(); track user.id) { <div class="member-row"><span class="avatar">{{ initials(user.name) }}</span><div><strong>{{ user.name }}</strong><small>{{ user.email }}</small></div><span class="role-badge">{{ user.role === 'admin' ? 'Администратор' : 'Участник' }}</span><span class="member-tasks">{{ tasksForUser(user.id) }} задач</span></div> }
         </section>
       }
       <footer class="page-footer"><span>Место для вашей следующей большой идеи.</span><span>TEAMFLOW <i>✧</i></span></footer>

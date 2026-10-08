@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'USER';
+export type Role = 'admin' | 'user';
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH';
 export interface User { id: string; name: string; email: string; role: Role; }

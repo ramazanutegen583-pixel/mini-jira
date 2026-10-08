@@ -4,7 +4,7 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: { baseURL: 'http://127.0.0.1:4202', channel: process.env['PLAYWRIGHT_CHANNEL'], trace: 'retain-on-failure', screenshot: 'only-on-failure', viewport: { width: 1440, height: 1050 } },
   webServer: [
-    { command: process.platform === 'win32' ? 'mvnw.cmd -B -ntp spring-boot:run -Dspring-boot.run.profiles=dev' : 'sh mvnw -B -ntp spring-boot:run -Dspring-boot.run.profiles=dev', cwd: '../backend', url: 'http://127.0.0.1:8082/actuator/health', reuseExistingServer: !process.env['CI'], timeout: 180000 },
+    { command: process.platform === 'win32' ? '.venv\\Scripts\\python -m alembic upgrade head && .venv\\Scripts\\python -m app.seed && .venv\\Scripts\\python -m uvicorn app.main:app --host 127.0.0.1 --port 8082' : '.venv/bin/python -m alembic upgrade head && .venv/bin/python -m app.seed && .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8082', cwd: '../backend', url: 'http://127.0.0.1:8082/health', reuseExistingServer: !process.env['CI'], timeout: 180000 },
     { command: 'pnpm start', url: 'http://127.0.0.1:4202', reuseExistingServer: !process.env['CI'], timeout: 120000 }
   ]
 });

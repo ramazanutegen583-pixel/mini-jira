@@ -1,14 +1,13 @@
-FROM maven:3.9-eclipse-temurin-17 AS build
+FROM python:3.13-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/app
 WORKDIR /app
-COPY pom.xml .
-RUN mvn -B -ntp dependency:go-offline
-COPY src ./src
-RUN mvn -B -ntp package -DskipTests
-
-FROM eclipse-temurin:17-jre-alpine
-RUN addgroup -S app && adduser -S app -G app
-WORKDIR /app
-COPY --from=build /app/target/mini-jira-1.0.0.jar app.jar
+RUN addgroup --system app && adduser --system --ingroup app app
+COPY requirements.txt .
+RUN pip install --no-cache-dir --requirement requirements.txt
+COPY alembic.ini ./
+COPY migrations ./migrations
+COPY app ./app
+RUN chown -R app:app /app
 USER app
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+CMD ["sh", "-c", "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8080 --proxy-headers"]

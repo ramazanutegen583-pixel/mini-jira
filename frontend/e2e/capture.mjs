@@ -10,7 +10,7 @@ await mkdir('../docs/screenshots', { recursive: true });
 await page.goto('http://127.0.0.1:4202');
 await page.evaluate(() => document.fonts.ready);
 await page.screenshot({ path: '../docs/screenshots/login.png', fullPage: true });
-await page.getByLabel('Email', { exact: true }).fill('admin@teamflow.local');
+await page.getByLabel('Email', { exact: true }).fill('admin@example.com');
 await page.getByLabel('Пароль', { exact: true }).fill('Admin-demo-2026!');
 await page.getByRole('button', { name: 'Войти в Teamflow' }).click();
 await page.locator('.task-card').first().waitFor();

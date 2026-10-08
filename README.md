@@ -1,33 +1,33 @@
 # Teamflow — Mini-Jira для команды
 
-Full-stack Kanban-приложение: **Java 17 / Spring Boot 3.5.16**, **Angular 22.2**, **PostgreSQL 17**. Реальные API и хранение данных, без подмены сервера браузерными моками.
+Full-stack Kanban для небольшой команды: **FastAPI / Python**, **Angular**, **PostgreSQL** в production и SQLite для разработки. API хранит задачи и аккаунты в базе, проверяет роли `admin` / `user`, выдаёт JWT через OAuth2 Password flow и возвращает единый формат ошибок.
 
-## Возможности
+## Что умеет приложение
 
-- Общая доска команды: **To Do → In Progress → Done**, drag-and-drop Angular CDK и доступный с клавиатуры выбор статуса.
-- Создание и редактирование задач, описание, приоритет, исполнитель, срок; поиск и фильтры.
-- Пользователи `USER` и `ADMIN`. Администратор создаёт аккаунты и удаляет задачи; обе роли работают с задачами общей команды.
-- Явный Java **Builder**, DTO, Bean Validation, сервисные транзакции и репозитории.
-- Spring Security OAuth2 Resource Server проверяет JWT: подпись HS256, issuer, audience, срок действия. BCrypt для паролей.
-- `@RestControllerAdvice`, единый JSON ошибок, `X-Request-ID` и логи действий без паролей и токенов.
-- Оптимистическая блокировка JPA `@Version`: устаревшие изменения и удаления получают **409**.
-- Flyway, индексы, PostgreSQL; отдельный dev-профиль с файловой H2 и демонстрационными данными.
-- Lazy routes для авторизации и доски, standalone-компоненты, signals, переиспользуемые модальные окна с focus trap и уведомления.
-- Docker Compose, Maven Wrapper, lockfile pnpm, CI для Java, Angular и Playwright.
+- Вход команды по аккаунтам, которые создаёт администратор; открытой регистрации нет.
+- Просмотр задач, фильтр по названию, исполнителю и приоритету; поиск всех страниц API.
+- Создание, редактирование и назначение задач, сроков и приоритетов.
+- Перемещение карточек между колонками `To Do`, `In Progress` и `Done` перетаскиванием или выбором статуса.
+- Управление участниками для администратора и удаление задач с проверкой роли на сервере.
+- Проверка версии задачи предотвращает перезапись параллельных изменений.
+- Ленивая загрузка экранов авторизации и доски, переиспользуемые модальные окна, уведомления и JWT interceptor.
+- Alembic миграции, Docker Compose, структурированные логи, request ID и CI.
 
-## Быстрый локальный запуск без Docker
+## Быстрый запуск на Windows
 
-Нужны **JDK 17–25**, **Node.js 24.19+**, **pnpm 11.25.0**. Maven скачает wrapper. Системная Java 8 не подходит: задайте `JAVA_HOME` на установленный JDK 17. Совместимость: [Spring Boot](https://docs.spring.io/spring-boot/3.5/system-requirements.html), [Angular](https://angular.dev/reference/versions).
-
-Первый терминал, из папки проекта:
+Нужны Python 3.12–3.14, Node.js 24 и pnpm 11. Для локальной разработки сервер использует SQLite.
 
 ```powershell
 cd backend
-# При необходимости: $env:JAVA_HOME = 'C:\path\to\jdk-17'
-.\mvnw.cmd spring-boot:run '-Dspring-boot.run.profiles=dev'
+py -3.14 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m alembic upgrade head
+python -m app.seed
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8082
 ```
 
-Второй терминал:
+В другом терминале:
 
 ```powershell
 cd frontend
@@ -35,219 +35,131 @@ pnpm install --frozen-lockfile
 pnpm start
 ```
 
-Для Linux/macOS: `sh mvnw spring-boot:run -Dspring-boot.run.profiles=dev`.
-
-Откройте **http://127.0.0.1:4202**. API: `http://127.0.0.1:8082`. Angular проксирует `/api` на бэкенд, поэтому запросы идут в один origin.
-
-Только в профиле `dev` автоматически создаются:
+Откройте `http://127.0.0.1:4202`. В локальном демо создаются:
 
 | Роль | Email | Пароль |
 |---|---|---|
-| ADMIN | `admin@teamflow.local` | `Admin-demo-2026!` |
-| USER | `alina@teamflow.local` | `User-demo-2026!` |
-| USER | `danil@teamflow.local` | `User-demo-2026!` |
+| admin | `admin@example.com` | `Admin-demo-2026!` |
+| user | `alina@example.com` | `User-demo-2026!` |
+| user | `danil@example.com` | `User-demo-2026!` |
 
-Dev-данные сохраняются в `backend/data`, исключённой из Git. Повторный запуск не сбрасывает ваши задачи. Токен хранится **только в памяти**: после перезагрузки вкладки потребуется войти заново. Через 30 минут сессия завершается.
+Демо-аккаунты предназначены только для локального запуска. API docs доступны на `http://127.0.0.1:8082/docs` в режиме `APP_ENV=dev`.
 
-## PostgreSQL и Docker Compose
+Для тестов браузера сначала установите зависимости в `backend\.venv` и браузер `pnpm exec playwright install chromium` из `frontend`, затем выполните `pnpm test:e2e`. Playwright самостоятельно поднимет API и Angular.
 
-```powershell
-Copy-Item .env.example .env
-# Замените ВСЕ CHANGE_ME в .env собственными значениями.
-docker compose up --build -d
-```
+## Production запуск
 
-Открывается тот же адрес `http://127.0.0.1:4202`. Остановите локальный Angular перед запуском Compose. PostgreSQL и API доступны только внутри сети Compose, наружу опубликован Nginx на loopback. Здесь dev-профиль **не включён**: создаётся только администратор из `.env`, без демонстрационных задач и известных паролей.
-
-JWT_SECRET: случайная строка не менее 32 байт; можно сгенерировать через `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"`. Пароль администратора — 12–64 символа. `.env` не коммитится. Bootstrap создаёт администратора, только если такого email ещё нет; смена переменной не меняет пароль существующего аккаунта.
-
-Перед внешней эксплуатацией нужны HTTPS на ingress, резервное копирование PostgreSQL, хранение секретов вне репозитория и проверка эксплуатационных требований вашей организации. Ограничение попыток входа включено на Nginx. В прямом dev API rate limit отсутствует.
+Скопируйте `.env.example` в `.env`, задайте `APP_ENV=production`, надёжный `JWT_SECRET` (не менее 32 байт), `ADMIN_EMAIL`, `ADMIN_PASSWORD` (не менее 12 символов) и случайный `DB_PASSWORD`. `DATABASE_URL` для Compose собирается из `DB_PASSWORD`. Затем выполните `docker compose up --build -d`. Приложение будет доступно через `http://localhost:4202`; frontend-контейнер проксирует API и ограничивает частоту входа. При первом запуске создаются схема и единственная административная учётная запись из переменных окружения. Не используйте демо-пароли в production.
 
 ## Структура
 
 ```text
-mini-jira/
-├── backend/
-│   ├── src/main/java/com/teamflow/
-│   │   ├── auth/       # login, JWT encoder/decoder, SecurityFilterChain
-│   │   ├── common/     # ControllerAdvice, ApiError, request logging
-│   │   ├── config/     # bootstrap и dev-данные
-│   │   ├── task/       # Task + Builder, DTO, controller/service/repository
-│   │   └── user/       # пользователи и роли
-│   ├── src/main/resources/db/migration/
-│   ├── src/test/java/com/teamflow/
-│   └── mvnw, mvnw.cmd
-├── frontend/src/app/
-│   ├── core/          # типы, API-сервис, auth guard/interceptor
-│   ├── shared/        # modal, alert, icon
-│   └── features/
-│       ├── auth/      # lazy routes + login
-│       └── board/     # lazy routes + Kanban + формы
-├── frontend/e2e/       # браузерные тесты против реального API
-├── .github/workflows/ci.yml
-└── compose.yml
+backend/
+  app/
+    core/          # конфигурация, JWT, зависимости ролей, логирование
+    crud/          # операции SQLAlchemy и транзакции
+    routers/       # auth, users, tasks/statuses
+    models.py      # SQLAlchemy модели и enum
+    schemas.py     # Pydantic входные/выходные контракты
+    exceptions.py  # доменная ошибка
+    main.py        # FastAPI, CORS, обработчики и request ID
+  migrations/      # Alembic
+  tests/           # API и проверки доступа
+frontend/src/app/
+  core/            # API, модели, auth guard/interceptor
+  features/auth/   # лениво загружаемый вход
+  features/board/  # Kanban, задачи, участники
+  shared/          # модальные окна и уведомления
 ```
 
-## Builder на Java
+## JWT OAuth2 в FastAPI
 
-Полная реализация: [`Task.java`](backend/src/main/java/com/teamflow/task/Task.java). Builder принимает обязательные поля в конструктор, задаёт defaults и проверяет инварианты при `build()`. Сущность имеет защищённый no-arg конструктор только для JPA и не предоставляет произвольные сеттеры.
+Пароль хешируется Argon2, токен подписан HS256 и проверяется по подписи, сроку, issuer и audience. Роль берётся из базы после проверки токена, а не из данных запроса. OAuth2 парольный flow принимает `application/x-www-form-urlencoded` (`username` содержит email):
 
-```java
-Task task = Task.builder("Реализовать авторизацию", reporter)
-    .description("JWT, роли и защищённые REST endpoints")
-    .priority(Priority.HIGH)
-    .assignee(developer)
-    .dueDate(LocalDate.now().plusDays(7))
-    .build(); // TODO по умолчанию; независимый UUID и timestamps
+```python
+@router.post("/login", response_model=OAuthSession)
+async def login(
+    credentials: Annotated[OAuth2PasswordRequestForm, Depends()],
+    session: DbSession,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> dict:
+    user = await get_by_email(session, credentials.username)
+    valid = await run_in_threadpool(
+        verify_password, credentials.password, user.password_hash if user else None
+    )
+    if user is None or not valid or not user.is_active:
+        raise HTTPException(status_code=401, detail="Неверный email или пароль")
+    token, expires_in = create_access_token(user, settings)
+    return {"access_token": token, "token_type": "bearer", "expires_in": expires_in, "user": user}
 ```
 
-Сокращённая структура паттерна:
+Защищённый административный маршрут использует общую зависимость проверки роли:
 
-```java
-public static Builder builder(String title, AppUser reporter) {
-    return new Builder(title, reporter);
+```python
+@router.delete("/tasks/{task_id}", status_code=204)
+async def delete_task(
+    task_id: UUID,
+    session: DbSession,
+    _: Annotated[User, Depends(require_role(Role.ADMIN))],
+    version: int = Query(ge=0),
+) -> Response:
+    await tasks_crud.delete_task(session, task_id, version)
+    return Response(status_code=204)
+```
+
+Неавторизованный запрос получает `401`, пользователь без административной роли — `403`. Изменения задачи требуют актуальную `version`; конфликт возвращает `409`.
+
+## Angular Kanban и interceptor
+
+Экран доски загружается маршрутом через `loadChildren`. CDK передаёт статус целевой колонки, API обновляет задачу с её текущей версией:
+
+```ts
+drop(event: CdkDragDrop<TaskStatus>) {
+  const task: Task = event.item.data;
+  this.move(task, event.container.data);
 }
 
-public static final class Builder {
-    private final String title;
-    private final AppUser reporter;
-    private Priority priority = Priority.MEDIUM;
-    // Другие необязательные поля...
-
-    private Builder(String title, AppUser reporter) {
-        this.title = title;
-        this.reporter = reporter;
-    }
-    public Builder priority(Priority value) {
-        priority = value;
-        return this;
-    }
-    public Task build() { return new Task(this); }
-}
-```
-
-## Защищённый endpoint Spring Security
-
-Настройка: [`SecurityConfig.java`](backend/src/main/java/com/teamflow/auth/SecurityConfig.java). `roles` из подписанного JWT преобразуются в `ROLE_ADMIN` / `ROLE_USER`. `@EnableMethodSecurity` включает проверку `@PreAuthorize`.
-
-```java
-@DeleteMapping("/{id}")
-@ResponseStatus(HttpStatus.NO_CONTENT)
-@PreAuthorize("hasRole('ADMIN')")
-public void delete(@PathVariable UUID id,
-                   @RequestParam @Min(0) long version,
-                   @AuthenticationPrincipal Jwt jwt) {
-    tasks.delete(id, version, UUID.fromString(jwt.getSubject()));
-}
-```
-
-Запрос без токена получает **401**, от USER — **403**, со старой версией — **409**. UI скрывает удаление у USER, но защита действует на сервере независимо от интерфейса. Reporter берётся из JWT, а не из JSON клиента.
-
-## Kanban и Lazy Loading на Angular
-
-[`app.routes.ts`](frontend/src/app/app.routes.ts):
-
-```typescript
-export const routes: Routes = [
-  { path: 'auth', loadChildren: () => import('./features/auth/auth.routes')
-      .then(m => m.AUTH_ROUTES) },
-  { path: 'board', canActivate: [authGuard],
-    loadChildren: () => import('./features/board/board.routes')
-      .then(m => m.BOARD_ROUTES) }
-];
-```
-
-`board.routes.ts` дополнительно загружает `BoardComponent` через `loadComponent`. Это современное разделение feature-разделов на standalone route trees, без обязательных `NgModule`.
-
-Структура [`BoardComponent`](frontend/src/app/features/board/board.component.ts):
-
-```typescript
-@Component({
-  imports: [DragDropModule, FormsModule, TaskFormComponent, /* ... */],
-  templateUrl: './board.component.html'
-})
-export class BoardComponent {
-  readonly tasks = signal<Task[]>([]);
-  readonly columns = signal<Column[]>([]);
-  readonly pending = signal(false);
-
-  drop(event: CdkDragDrop<TaskStatus>) {
-    const task: Task = event.item.data;
-    this.move(task, event.container.data);
-  }
-  // move вызывает PATCH /api/tasks/{id}/status с status и version.
-  // Обновление локального массива — только после успешного ответа API.
+move(task: Task, status: TaskStatus) {
+  if (task.status === status || this.pending()) return;
+  this.pending.set(true);
+  this.api.move(task, status)
+    .pipe(finalize(() => this.pending.set(false)))
+    .subscribe({
+      next: updated => this.tasks.update(items => items.map(item => item.id === task.id ? updated : item)),
+      error: error => this.alerts.error(error),
+    });
 }
 ```
 
-Шаблон использует `cdkDropListGroup`, `cdkDropList` и `cdkDrag`. Сортировка внутри колонок отключена: сервер хранит статус, а порядок карточек определяется временем создания. Пока перенос сохраняется, повторное перемещение блокируется. При 409 доска перечитывается. При конфликте редактирования текст в форме сохраняется для ручного переноса.
+Сам список колонок использует `cdkDropListGroup`, а каждая карточка — `cdkDrag`. `authInterceptor` добавляет `Authorization: Bearer …` ко всем API-запросам; вход отправляет OAuth2 форму и хранит сессию в памяти браузера. После перезагрузки страницы требуется войти снова.
 
 ## REST API
 
-Все endpoints, кроме login и health, требуют `Authorization: Bearer <token>`.
-
 | Метод и путь | Доступ | Назначение |
 |---|---|---|
-| `POST /api/auth/login` | Публичный | Email + password → JWT, expiresAt, user |
-| `GET /api/auth/me` | USER, ADMIN | Текущий участник |
-| `GET /api/users` | USER, ADMIN | Участники команды |
-| `POST /api/users` | ADMIN | Создать участника |
-| `GET /api/statuses` | USER, ADMIN | Три фиксированных статуса |
-| `GET /api/tasks?page=0&size=100` | USER, ADMIN | Страница задач, size 1–100 |
-| `POST /api/tasks` | USER, ADMIN | Создать задачу в TODO |
-| `PUT /api/tasks/{id}` | USER, ADMIN | Изменить поля с проверкой version |
-| `PATCH /api/tasks/{id}/status` | USER, ADMIN | Переместить задачу с проверкой version |
-| `DELETE /api/tasks/{id}?version=0` | ADMIN | Удалить задачу с проверкой version |
-| `GET /actuator/health` | Публичный | Health без внутренних подробностей |
+| `POST /api/auth/login` | публичный | OAuth2 форма, выдача JWT |
+| `GET /api/auth/me` | user/admin | Текущий пользователь |
+| `GET /api/users` | user/admin | Участники команды |
+| `POST /api/users` | admin | Создать участника |
+| `GET /api/statuses` | user/admin | Три фиксированные колонки |
+| `GET /api/tasks?page=0&size=100` | user/admin | Пагинированный список задач |
+| `POST /api/tasks` | user/admin | Создать задачу |
+| `PUT /api/tasks/{id}` | user/admin | Изменить задачу с `version` |
+| `PATCH /api/tasks/{id}/status` | user/admin | Переместить задачу с `version` |
+| `DELETE /api/tasks/{id}?version=0` | admin | Удалить задачу с `version` |
 
-Создание задачи:
-
-```json
-{"title":"Подготовить релиз","description":"Проверить сценарии","priority":"HIGH","assigneeId":null,"dueDate":"2027-01-15"}
-```
-
-Перемещение:
-
-```json
-{"status":"IN_PROGRESS","version":0}
-```
-
-Ответ ошибки:
-
-```json
-{"timestamp":"2026-10-03T07:00:00Z","status":409,"message":"Задача уже изменена. Обновите доску и повторите действие.","requestId":"uuid","fields":{}}
-```
-
-Неизвестные JSON-поля отклоняются. Сущности JPA и хеши паролей не возвращаются клиенту. Текущий Kanban получает все страницы API и фильтрует их локально — это осознанный предел для небольшой команды, а не бесконечная доска на миллионы задач.
-
-## Проверки
+## Проверки и границы
 
 ```powershell
 cd backend
-.\mvnw.cmd verify
-cd ../frontend
+.\.venv\Scripts\Activate.ps1
+ruff check app tests migrations
+pytest --cov=app --cov-report=term-missing
+cd ..\frontend
 pnpm build
-pnpm exec playwright install chromium
 pnpm test:e2e
 ```
 
-Если на Windows уже установлен Edge, можно использовать его без скачивания Chromium:
+Тесты покрывают OAuth2-вход, роли, формат ошибок, создание/перемещение/удаление и конкурентное изменение задач. Это общая доска одной команды: workspace isolation, публичная регистрация, refresh tokens, отзыв уже выданного JWT, email-сброс пароля, комментарии, вложения и realtime-обновления не реализованы. JWT хранится только в памяти браузера.
 
-```powershell
-$env:PLAYWRIGHT_CHANNEL = 'msedge'
-pnpm test:e2e
-```
-
-Playwright сам поднимает dev API и Angular или использует уже работающие локальные серверы. Эти тесты предназначены для локальной/dev-базы, не для рабочего окружения. После успешного CRUD-сценария тестовая задача удаляется. В случае прерывания может остаться задача с префиксом `E2E task`.
-
-Java: Builder, вход, невалидные/просроченные токены, audience, права, переходы статусов, создание пользователей, валидация, пагинация, optimistic locking. Один API-контракт запускается на H2 и на PostgreSQL Testcontainers. PostgreSQL-тесты автоматически пропускаются без Docker; CI на Ubuntu запускает их с Docker.
-
-CI предполагает, что содержимое `mini-jira` станет корнем отдельного репозитория. Пока папка находится внутри другого репозитория, вложенный workflow не запускается GitHub автоматически.
-
-## Границы проекта
-
-Это реализация Mini-Jira для **одной общей команды** с enterprise-приёмами, а не полноценная multi-tenant Jira. Публичной регистрации нет: доступ выдаёт ADMIN. Все допущенные участники видят общую доску и могут редактировать её задачи. Пользовательские колонки, realtime/WebSocket, комментарии, вложения, SSO, refresh tokens, немедленный отзыв JWT, восстановление паролей и долговременный audit storage не включены. Выход очищает токен в браузере; уже выданный JWT остаётся криптографически действительным до истечения срока. Логи действий не заменяют отдельный неизменяемый журнал аудита.
-
-Справочные материалы: [JWT в Spring Security](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html), [Angular CDK Drag and Drop](https://angular.dev/guide/drag-drop), [настройки сборки pnpm 11](https://pnpm.io/blog/releases/11.0).
-
-Git commit и push не выполнялись. Файлы подготовлены для отдельного репозитория; даты Git не подменялись.
+Подробности OAuth2/JWT: [FastAPI Security](https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/); перетаскивание карточек: [Angular CDK Drag and Drop](https://angular.dev/guide/drag-drop).

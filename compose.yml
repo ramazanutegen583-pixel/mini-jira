@@ -18,9 +18,8 @@ services:
     build: ./backend
     environment:
       PORT: '8080'
-      DB_URL: jdbc:postgresql://database:5432/minijira
-      DB_USERNAME: minijira
-      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      APP_ENV: production
+      DATABASE_URL: postgresql+asyncpg://minijira:${DB_PASSWORD:?Set DB_PASSWORD in .env}@database:5432/minijira
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}

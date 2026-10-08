@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('admin can create, drag, edit and delete a task through the live API', async ({ page }) => {
   const title = `E2E task ${Date.now()}`;
   await page.goto('/');
-  await page.getByLabel('Email', { exact: true }).fill('admin@teamflow.local');
+  await page.getByLabel('Email', { exact: true }).fill('admin@example.com');
   await page.getByLabel('Пароль', { exact: true }).fill('Admin-demo-2026!');
   await page.getByRole('button', { name: 'Войти в Teamflow' }).click();
   await expect(page.getByRole('heading', { name: 'Всё начинается с задачи.' })).toBeVisible();
@@ -42,7 +42,7 @@ test('admin can create, drag, edit and delete a task through the live API', asyn
 test('member permissions, search and mobile layout work', async ({ page }) => {
   await page.goto('/board');
   await expect(page).toHaveURL(/auth\/login/);
-  await page.getByLabel('Email', { exact: true }).fill('alina@teamflow.local');
+  await page.getByLabel('Email', { exact: true }).fill('alina@example.com');
   await page.getByLabel('Пароль', { exact: true }).fill('User-demo-2026!');
   await page.getByRole('button', { name: 'Войти в Teamflow' }).click();
   await expect(page.locator('.task-card').first()).toBeVisible();
@@ -64,7 +64,7 @@ test('member permissions, search and mobile layout work', async ({ page }) => {
 
 test('login errors stay visible and modal traps focus and closes with Escape', async ({ page }) => {
   await page.goto('/auth/login');
-  await page.getByLabel('Email', { exact: true }).fill('admin@teamflow.local');
+  await page.getByLabel('Email', { exact: true }).fill('admin@example.com');
   await page.getByLabel('Пароль', { exact: true }).fill('wrong-password');
   await page.getByRole('button', { name: 'Войти в Teamflow' }).click();
   await expect(page.getByRole('alert')).toContainText('Неверный email или пароль');
